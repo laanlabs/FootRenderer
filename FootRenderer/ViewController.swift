@@ -5,6 +5,8 @@
 //  Created by cc on 4/22/18.
 //  Copyright © 2018 Laan Labs. All rights reserved.
 //
+// Modified by Haricharan Bole(github: haricharanbole)
+// Modified the code to avoid using a separate mask renderer code. 
 
 import SceneKit
 import QuartzCore
@@ -16,7 +18,6 @@ struct AppSettings {
 class ViewController: NSViewController {
 
     var sceneView : SCNView! = nil
-    var snapshotter: MaskRenderer?
 
     // TODO: implement reusable scene state
     typealias SceneState = Int
@@ -124,27 +125,21 @@ class ViewController: NSViewController {
 
                 print("taking snapshot")
                 let name = String(format: "%05d.png", task.id)
-
-                self.snapshotter = MaskRenderer(after: 3) { (image, mask) in
-
-                    print("[MaskRenderer::completion] saving frame: \(name)")
-                    Project.saveImage(image, to: name)
-                    Project.saveMask(mask, to: name)
-
-                    task.state = .captured
-                }
-
-//                self.scene?.camera = self.sceneView.pointOfView
                 self.sceneView.scene = self.scene
-                self.sceneView.delegate = self.snapshotter
-
-                task.state = .capturing
+                let img = self.sceneView.snapshot()
+                Project.saveImage(img, to: name)
+                self.scene.setMaskLighting()
+                self.sceneView.scene = self.scene
+                let msk = self.sceneView.snapshot()
+                Project.saveMask(msk, to: name)
+                
+                task.state = .captured
 
             }
         case .preparing:
             print("[processQueue(\(task.id))] waiting for scene to be prepared")
         case .capturing:
-            print("[processQueue(\(task.id))] waiting for scene capture to complete: \(snapshotter!.frameIdx)")
+            print("[processQueue(\(task.id))] waiting for scene capture to complete:")
         case .captured:
             task.state = .finished
         case .finished:
